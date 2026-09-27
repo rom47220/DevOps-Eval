@@ -102,7 +102,7 @@ jobs:
       - name: Install yamllint
         run: pip install yamllint
       - name: Lint workflows
-        run: yamllint -d "{extends: relaxed, rules: {line-length: disable}}" .github/workflows .github/actions
+        run: yamllint .github/workflows .github/actions
 
   ci-ok:
     name: Ci-ok

@@ -3,7 +3,7 @@
 Mini API Flask + Redis, avec Docker, CI/CD GitHub Actions et un peu d'observabilite
 (Prometheus / Grafana).
 
-Repo : a remplir apres creation GitHub
+Repo : https://github.com/rom47220/DevOps-Eval
 
 ## Lancer en local
 
