@@ -1,0 +1,122 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+
+permissions:
+  contents: read
+  packages: write
+  actions: read
+
+concurrency:
+  group: cd-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success')
+    runs-on: self-hosted
+    timeout-minutes: 30
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/devops-eval
+      APP_VERSION: "1.0.0"
+    steps:
+      - name: Resolve commit
+        id: rev
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.rev.outputs.sha }}
+
+      - name: Short SHA
+        id: meta
+        shell: bash
+        run: echo "short=$(echo '${{ steps.rev.outputs.sha }}' | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          file: ./app/Dockerfile
+          push: true
+          build-args: |
+            GIT_SHA=${{ steps.rev.outputs.sha }}
+            APP_VERSION=${{ env.APP_VERSION }}
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ steps.meta.outputs.short }}
+            ${{ env.IMAGE }}:${{ env.APP_VERSION }}
+
+      - name: Save previous tag for rollback
+        id: previous
+        shell: bash
+        working-directory: app
+        run: |
+          mkdir -p .deploy
+          if [ -f .deploy/current_tag ]; then
+            echo "tag=$(cat .deploy/current_tag)" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy
+        id: deploy
+        shell: bash
+        working-directory: app
+        env:
+          GIT_SHA: ${{ steps.rev.outputs.sha }}
+          APP_VERSION: ${{ env.APP_VERSION }}
+        run: |
+          docker pull "${{ env.IMAGE }}:${{ steps.meta.outputs.short }}"
+          docker tag "${{ env.IMAGE }}:${{ steps.meta.outputs.short }}" devops-eval:local
+          docker compose up -d --no-build web redis
+          bash ../scripts/healthcheck.sh http://localhost:8080/health 3 3
+          echo "${{ steps.meta.outputs.short }}" > .deploy/current_tag
+
+      - name: Rollback
+        if: failure() && steps.deploy.outcome == 'failure'
+        shell: bash
+        working-directory: app
+        run: |
+          set -e
+          prev="${{ steps.previous.outputs.tag }}"
+          echo "Rollback vers ${prev:-latest}"
+          if [ -n "$prev" ]; then
+            docker pull "${{ env.IMAGE }}:${prev}"
+            docker tag "${{ env.IMAGE }}:${prev}" devops-eval:local
+          else
+            docker pull "${{ env.IMAGE }}:latest"
+            docker tag "${{ env.IMAGE }}:latest" devops-eval:local
+          fi
+          docker compose up -d --no-build web redis
+          exit 1

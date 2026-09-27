@@ -1,0 +1,32 @@
+name: Setup Python deps
+description: Install Python and project dependencies with cache
+
+inputs:
+  python-version:
+    description: Python version
+    required: true
+  working-directory:
+    description: App directory
+    required: false
+    default: app
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ inputs.python-version }}-${{ hashFiles(format('{0}/requirements.txt', inputs.working-directory)) }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ inputs.python-version }}-
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: pip install -r requirements.txt

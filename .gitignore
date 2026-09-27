@@ -1,0 +1,12 @@
+__pycache__/
+.pytest_cache/
+.venv/
+.env
+.idea/
+.vscode/
+.DS_Store
+htmlcov/
+.coverage
+*.pyc
+coverage.xml
+junit.xml
