@@ -10,3 +10,4 @@ htmlcov/
 *.pyc
 coverage.xml
 junit.xml
+notes-oral.md
