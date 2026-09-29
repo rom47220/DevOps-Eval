@@ -19,20 +19,20 @@ GIT_SHA = os.getenv("GIT_SHA", "unknown")
 
 HTTP_REQUESTS_TOTAL = Counter(
     "http_requests_total",
-    "Nombre total de requetes HTTP",
+    "Total requetes HTTP",
     ["endpoint", "code"],
 )
 
 HTTP_REQUEST_DURATION_SECONDS = Histogram(
     "http_request_duration_seconds",
-    "Duree des requetes HTTP",
+    "Latence HTTP",
     ["endpoint"],
     buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0),
 )
 
 APP_INFO = Gauge(
     "app_info",
-    "Version et commit deployes",
+    "version / git_sha deployes",
     ["version", "git_sha"],
 )
 APP_INFO.labels(version=APP_VERSION, git_sha=GIT_SHA).set(1)

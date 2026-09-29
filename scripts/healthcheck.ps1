@@ -1,4 +1,3 @@
-# healthcheck Windows PowerShell / pwsh
 param(
   [string]$Url = "http://localhost:8080/health",
   [int]$Retries = 3,

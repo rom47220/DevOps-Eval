@@ -12,8 +12,8 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Trop d'erreurs 5xx"
-          description: "Le ratio d'erreurs depasse 5% depuis plus de 30s."
+          summary: "Trop de 5xx"
+          description: "Ratio d'erreurs > 5% depuis 30s."
 
       - alert: HighLatencyP95
         expr: |
@@ -25,5 +25,5 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "Latence p95 degradee"
-          description: "La latence p95 depasse 500ms depuis plus d'1 minute."
+          summary: "p95 trop haute"
+          description: "p95 > 500ms depuis 1 min."

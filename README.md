@@ -1,18 +1,17 @@
 # DevOps Eval
 
-Mini API Flask + Redis, avec Docker, CI/CD GitHub Actions et un peu d'observabilite
-(Prometheus / Grafana).
+Romain Dumoulin — https://github.com/rom47220/DevOps-Eval
 
-Repo : https://github.com/rom47220/DevOps-Eval
+Petite API Flask + Redis pour l'eval. Docker, CI/CD GitHub Actions,
+runner self-hosted sur ma machine, et un peu de Prometheus / Grafana
+(comme sur les ateliers).
 
-## Lancer en local
+## Lancer
 
 ```bash
 cd app
 docker compose up -d --build
 ```
-
-Ensuite :
 
 - App : http://localhost:8080/health
 - Status : http://localhost:8080/status
@@ -20,42 +19,34 @@ Ensuite :
 - Prometheus : http://localhost:9090
 - Grafana : http://localhost:3000 (admin / admin)
 
-Stop :
-
 ```bash
 docker compose down
 ```
 
-## Tests / lint (sans Docker)
+## Tests / lint en local
 
 ```bash
 cd app
 python -m venv .venv
-# Windows
 .venv\Scripts\activate
 pip install -r requirements.txt
-# Redis doit tourner (compose up redis -d)
+# faut que Redis tourne (docker compose up redis -d)
 flake8 .
 pytest -v
 ```
 
 ## CI / CD
 
-- `ci.yml` : lint, tests (matrix Python 3.11/3.12 + Redis), build image, lint YAML, job final `ci-ok`
-- `cd.yml` : push image sur GHCR (`latest`, SHA court, `1.0.0`) puis deploy sur le runner self-hosted
+- `ci.yml` : flake8, pytest (3.11 + 3.12 avec Redis), build image, yamllint, job `ci-ok`
+- `cd.yml` : apres une CI verte, build/push sur GHCR puis deploy sur le runner
 
-Le CD tourne sur un runner self-hosted (ta machine), puis verifie `/health` (3 essais).
-Si ca casse, rollback vers l'image precedente.
+Tags image : `latest`, SHA court, `1.0.0`.
+Le deploy fait un healthcheck (3 essais). Si ca casse, rollback sur le tag d'avant.
 
-## Alertes Prometheus
+Image : `ghcr.io/rom47220/devops-eval:1.0.0`
 
-Fichier `app/observability/prometheus/alerts.yml` :
+## Alertes
 
-- `HighErrorRate` : plus de 5% d'erreurs 5xx pendant 30s
-- `HighLatencyP95` : p95 > 500ms pendant 1 minute
-
-## Image
-
-```bash
-docker pull ghcr.io/<ton-user>/devops-eval:1.0.0
-```
+Dans `app/observability/prometheus/alerts.yml` :
+- HighErrorRate (> 5% de 5xx pendant 30s)
+- HighLatencyP95 (p95 > 500ms pendant 1 min)

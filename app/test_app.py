@@ -45,7 +45,7 @@ def test_metrics_and_counter():
 
 
 def test_health_uses_redis_service():
-    """Le test parle vraiment a Redis (service CI / compose)."""
+    # ping reel (service Redis en CI)
     import os
 
     import redis
